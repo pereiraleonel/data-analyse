@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+@import url("style.css");
+
+html, body {
+  height: 100%;
+  background: #E6E6E6;
+  margin: 0;
+  font: 10px sans-serif;
+  font-weight: bold;
+}
+
+svg {
+  display: block;
+}
+
+circle {
+  stroke: black;
+  fill-opacity: .5;
+}
+
+#map {
+  width: 50%;
+  height: 100%;
+}
+
+.d3-tip {
+  line-height: 1;
+  font-weight: bold;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  border-radius: 2px;
+}
+
+/* Creates a small triangle extender for the tooltip */
+.d3-tip:after {
+  box-sizing: border-box;
+  display: inline;
+  font-size: 10px;
+  width: 100%;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.8);
+  content: "\25BC";
+  position: absolute;
+  text-align: center;
+}
+
+/* Style northward tooltips differently */
+.d3-tip.n:after {
+  margin: -1px 0 0 0;
+  top: 100%;
+  left: 0;
+}
+
+</style>
+<div id="map"></div>
+<script src="d3.min.js"></script>
+<script src="polymaps.min.js"></script>
+<script src="d3.tip.v0.6.3.js"></script>
+<script>
+
+var tip = d3.tip()
+  .attr('class', 'd3-tip')
+  .offset([-10, 0])
+  .html(function(d) {
+    return "<strong>COLLEGE:</strong> <span style='color:red'>" + d.value[0] + "</span><br><strong>ADDRESS:</strong><span style='color:red'>" + d.value[1] + "</span><br><strong>TELEPHONE:</strong><span style='color:red'>" + d.value[2] + "</span>";
+  })
+
+var po = org.polymaps;
+
+// Create the map object, add it to #map…
+var map = po.map()
+    .container(d3.select("#map").append("svg").node())
+    .zoom(11)
+    .center({lat: 29.759937, lon: -95.368280})
+    .add(po.interact());
+
+// Add the CloudMade image tiles as a base layer…
+map.add(po.image()
+    .url(po.url("http://{S}tile.cloudmade.com"
+    + "/1a1b06b230af4efdbb989ea99e9841af" // http://cloudmade.com/register
+    + "/998/256/{Z}/{X}/{Y}.png")
+    .hosts(["a.", "b.", "c.", ""])));
+
+// Add the compass control on top.
+map.add(po.compass()
+    .pan("none"));
+
+// Load the station data. When the data comes back, display it.
+d3.json("data.json", function(error, data) {
+  if (error) throw error;
+
+  // Insert our layer beneath the compass.
+  var layer = d3.select("#map svg").insert("g", ".compass");
+
+  // Add an svg:g for each station.
+  var marker = layer.selectAll("g")
+      .data(d3.entries(data))
+    .enter().append("g")
+      .attr("transform", transform);
+      
+  //call method tip
+  marker.call(tip)
+  
+  // Add a circle.
+  marker.append("circle")
+	  .attr("fill", function(d) { return d.value[5];})//.attr("fill","brown")
+      .attr("r", 6)//.attr("r", function(d) { return d.value[2];})
+      .on('mouseover',tip.show)
+      .on('mouseout', tip.hide)
+
+  // Add a label.
+  marker.append("text")
+      .attr("x", 7)
+      .attr("dy", ".31em")
+      .text(function(d) { return d.key; });
+
+  // Whenever the map moves, update the marker positions.
+  map.on("move", function() {
+    layer.selectAll("g").attr("transform", transform);
+  });
+
+  function transform(d) {
+    d = map.locationPoint({ lat: d.value[3] ,lon: d.value[4]});
+    return "translate(" + d.x + "," + d.y + ")";
+  }
+});
+
+</script>
